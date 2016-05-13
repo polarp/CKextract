@@ -1,0 +1,5 @@
+images/*
+*.json
+.project
+.pydevproject
+.settings/

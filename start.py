@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 
+import os
 import requests
 import json
 from lxml import html
 from urlparse import urljoin, urlsplit
 from datetime import date, timedelta, datetime
+from operator import itemgetter
+from StringIO import StringIO
+from PIL import Image
 
 def get(url, retry=None):
 	if retry is None:
@@ -22,9 +26,35 @@ def get(url, retry=None):
 	return q
 
 def date_range(start=None, end=None):
-    span = end - start
-    for i in xrange(span.days + 1):
-        yield start + timedelta(days=i)
+	span = end - start
+	for i in xrange(span.days + 1):
+		yield start + timedelta(days=i)
+
+def process_image(url, dt,location=None, ext=None):
+	if location is None:
+		location = 'images'
+
+	if ext is None:
+		ext = 'jpg'
+
+	q = get(url)
+	if q is None or q.status_code != 200:
+		return ''
+
+	try:
+		image = Image.open(StringIO(q.content))
+	except:
+		image = None
+
+	if image is None:
+		return ''
+
+	if not os.path.isdir(location):
+		os.makedirs(location)
+
+	path = '{}/{}.{}'.format(location, dt.timetuple().tm_yday, ext)
+	image.save(path)
+	return path
 
 def process_page(data, date_, url):
 	title_selector = '//span/h1[@class="mk"]/text()'
@@ -43,9 +73,11 @@ def process_page(data, date_, url):
 						 'color': 'црн',
 						 'descriptionUrl': urljoin(url, d)})
 
+	img = process_image(urljoin(url, itemgetter(0)(doc.xpath(image_selector))), date_)
+
 	return dict({'dayOfYear': str(date_.timetuple().tm_yday),
 				'nationalHoliday': None,
-				'imageUrl': '',
+				'imageUrl': img,
 				'holidays': holidays,
 				'fastingFoods': [i.encode('utf-8') for i in doc.xpath(fasting_foods_selector)]})
 
@@ -67,7 +99,7 @@ def main():
 		data.append(process_page(q.content, dt, url))
 
 	with open('data.json', 'w') as out:
-	     json.dump(data, out, sort_keys = True, indent = 4, ensure_ascii=False)
+		json.dump(data, out, sort_keys = True, indent = 4, ensure_ascii=False)
 
 if __name__=='__main__':
 	main()
