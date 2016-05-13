@@ -72,8 +72,9 @@ def process_page(data, date_, url):
 		holidays.append({'name': t.encode('utf-8'),
 						 'color': 'црн',
 						 'descriptionUrl': urljoin(url, d)})
-
-	img = process_image(urljoin(url, itemgetter(0)(doc.xpath(image_selector))), date_)
+	
+	img = '' if not len(doc.xpath(image_selector)) > 0 else\
+				process_image(urljoin(url, itemgetter(0)(doc.xpath(image_selector))), date_)
 
 	return dict({'dayOfYear': str(date_.timetuple().tm_yday),
 				'nationalHoliday': None,
